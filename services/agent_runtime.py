@@ -1,0 +1,1 @@
+# Core harness: execution loop, validation, tracing
