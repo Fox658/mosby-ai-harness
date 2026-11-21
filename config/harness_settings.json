@@ -1,1 +1,17 @@
-{}
+{
+  "context_budget": 4096,
+  "step_timeout_seconds": 25,
+  "max_concurrent_workers": 1,
+  "retry_policy": {
+    "enabled": true,
+    "max_attempts": 2,
+    "backoff_ms": 300,
+    "fallback_state_on_exhaustion": "review_pending"
+  },
+  "observability": {
+    "trace_id_required": true,
+    "log_context_size": true,
+    "track_token_estimates": true,
+    "debug_mode": false
+  }
+}

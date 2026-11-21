@@ -1,1 +1,37 @@
-# Step graph + handoff contracts
+version: "1.0"
+name: "feature-scaffold-pipeline"
+steps:
+  - id: context_ingest
+    type: sync
+    adapter: repo_context_extractor
+    input_schemas: []
+    output_schema: ProjectContext
+    constraints:
+      {
+        curated_paths: ["app/models/", "db/schema.rb", "config/routes.rb"],
+        max_depth: 2,
+      }
+
+  - id: planner
+    type: llm
+    adapter: task_planner
+    input_schemas: [ProjectContext]
+    output_schema: TaskGraph
+    constraints: { require_conventions: true, max_subtasks: 8 }
+
+  - id: code_generator
+    type: llm
+    adapter: code_synthesizer
+    input_schemas: [TaskGraph, ProjectContext]
+    output_schema: CodeDiffBundle
+    constraints: { diff_format: "unified", hard_fails: ["syntax", "schema"] }
+
+  - id: validator
+    type: sync_deterministic
+    adapter: rubocop_linter
+    input_schemas: [CodeDiffBundle]
+    output_schema: ValidationResult
+    constraints: { auto_retry: false, fail_threshold: 1 }
+
+handoff_policy: strict_contract_check
+fallback_mode: review_pending_on_validation_fail
