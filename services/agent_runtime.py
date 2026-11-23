@@ -23,6 +23,7 @@ class AgentRuntime:
         self.settings = harness_settings
         self.trace_id = str(uuid.uuid4())
         self.execution_log = []
+
     ADAPTER_REGISTRY = {
         "repo_context_extractor": RepoContextExtractor,
         "task_planner": TaskPlanner,
@@ -105,13 +106,11 @@ class AgentRuntime:
     # ──────────────────────────────────────────────────────────────
     # ADAPTER ABSTRACTION (Swap per project without touching runtime)
     # ──────────────────────────────────────────────────────────────
-    def _call_adapter(self, adapter_name: str, context_state: List[Any]) -> Any:
+    def _call_adapter(adapter_name: str, config_path: str, repo_root: List[Any]) -> Any:
         if adapter_name not in ADAPTER_REGISTRY:
             raise ValueError(f"Unknown adapter: {adapter_name}")
         
         # Instantiate with project-specific config (loaded from adapters/config/ directory)
-        adapter_cls = ADAPTER_REGISTRY[adapter_name]
-        adapter_config = self._resolve_adapter_config(adapter_name)  # Reads YAML/JSON per project
-        
-        instance = adapter_cls(**adapter_config)
-        return instance.execute(context_state)  # Each adapter exposes .execute() or named method
+        instance = ADAPTER_REGISTRY[adapter_name](config_path=config_path)
+        result = instance.execute(repo_root)  # Returns ProjectContext automatically
+        return result

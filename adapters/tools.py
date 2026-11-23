@@ -3,11 +3,14 @@ from pydantic import BaseModel, Field
 from typing import List, Optional, Dict
 
 class ProjectContext(BaseModel):
-    """Extracted conventions from curated repo paths."""
+    """Lean, structured context extracted from project structure."""
     naming_conventions: Dict[str, str] = Field(default_factory=dict)
     module_boundaries: List[Dict[str, str]] = Field(default_factory=list)
     auth_patterns: List[Dict[str, str]] = Field(default_factory=list)
     db_schema_snippet: Optional[str] = None
+    common_files: List[str] = []
+    cache_version: str = ""  # For invalidation
+    last_updated: float = 0.0
 
 class TaskGraph(BaseModel):
     """Planner output: deterministic step sequence."""
