@@ -36,9 +36,14 @@ class CodeDiffBundle(BaseModel):
     target_paths: List[str] = Field(...)
     estimated_impact: str = "medium"  # low/medium/high
 
+class ValidationError(Exception):
+    """Raised when validation fails beyond retry capacity."""
+    pass
+
 class ValidationResult(BaseModel):
-    """Deterministic validation results."""
+    """Deterministic output from the validation gate."""
     passed: bool = False
     errors: List[Dict[str, str]] = Field(default_factory=list)
     suggestions: Optional[List[str]] = None
     confidence_score: float = 0.0
+    step_name: str = "validator"

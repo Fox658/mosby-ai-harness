@@ -3,6 +3,7 @@ import uuid
 import time
 from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, ValidationError, Field
+from adapters.tools import ValidationResult
 from adapters.context_extractor import RepoContextExtractor
 from adapters.planner import TaskPlanner
 from adapters.synthesizer import CodeSynthesizer
@@ -84,11 +85,20 @@ class AgentRuntime:
     # ──────────────────────────────────────────────────────────────
     # RETRY & POLICY ENGINE
     # ──────────────────────────────────────────────────────────────
-    def _apply_retry_policy(self, step_name: str, result) -> Any:
-        """Enforces exactly 1 retry before pausing. Implemented deterministically."""
-        self._log(step_name, "retry_applied", {"reason": "validation_failed"})
-        # In production: inject error context back into next prompt attempt
-        raise WorkflowPauseError(f"Step '{step_name}' hit retry limit. Pausing for human review.")
+    def _apply_retry_policy(self, step_name: str, result, attempts):
+        if isinstance(result, ValidationResult) and not result.passed:
+            if attempts < self.settings["retry_policy"]["max_attempts"]:
+                # Inject deterministic errors into next prompt attempt
+                error_context = [f"Validation failed. Errors: {result.errors}"]
+                print(f"[RETRY] {step_name} attempt {attempts+1}/{self.settings['retry_policy']['max_attempts']}")
+                return self._call_next_step_with_error_context(result, error_context)
+            
+            # Exhausted: hard pause & emit review_pending
+            raise WorkflowPauseError(
+                f"Step '{step_name}' hit retry limit. Pausing for human review."            f"Step '{step_name}' exceeded retry limit. Pausing workflow.", 
+                step_name=step_name, 
+                validation_errors=result.errors
+            )
 
     # ──────────────────────────────────────────────────────────────
     # OBSERVABILITY & CONTEXT BUDGETING
