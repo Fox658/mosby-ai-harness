@@ -8,6 +8,12 @@ from adapters.planner import TaskPlanner
 from adapters.synthesizer import CodeSynthesizer
 from adapters.validator import ValidationGuardrail
 
+ADAPTER_REGISTRY = {
+    "repo_context_extractor": RepoContextExtractor,
+    "task_planner": TaskPlanner,
+    "code_synthesizer": CodeSynthesizer,
+    "validation_guardrail": ValidationGuardrail,
+}
 
 class ContractViolationError(Exception):
     """Raised when an adapter output fails schema validation."""
@@ -24,12 +30,6 @@ class AgentRuntime:
         self.trace_id = str(uuid.uuid4())
         self.execution_log = []
 
-    ADAPTER_REGISTRY = {
-        "repo_context_extractor": RepoContextExtractor,
-        "task_planner": TaskPlanner,
-        "code_synthesizer": CodeSynthesizer,
-        "validation_guardrail": ValidationGuardrail,
-    }
     # ──────────────────────────────────────────────────────────────
     # CORE EXECUTION LOOP
     # ──────────────────────────────────────────────────────────────
@@ -56,7 +56,7 @@ class AgentRuntime:
                     "status": "review_pending",
                     "trace_id": self.trace_id,
                     "failed_step": step["id"],
-                    "error": str(exception),
+                    "error": str(Exception),
                     "current_state_snapshot": current_state
                 }
 
@@ -94,13 +94,17 @@ class AgentRuntime:
     # OBSERVABILITY & CONTEXT BUDGETING
     # ──────────────────────────────────────────────────────────────
     def _log(self, stage: str, status: str, metadata: Optional[Dict] = None):
+        # Initialize an empty dict if metadata is None
+        meta_dict = metadata if metadata is not None else {}
+
         entry = {
             "trace_id": self.trace_id,
             "stage": stage,
             "status": status,
             "timestamp": time.time(),
-            **metadata or {}
+            **meta_dict
         }
+
         self.execution_log.append(entry)
 
     # ──────────────────────────────────────────────────────────────
